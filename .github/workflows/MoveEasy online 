@@ -1,0 +1,304 @@
+Of course. This is the moment we transition from blueprint to reality. Choosing the right backend platform and setting it up correctly is the most critical decision you'll make for the future of MoveEasy-Online.
+
+Given your prototypes and the ambitious scope of a "Financial OS," I have a strong recommendation that balances power, scalability, and the crucial requirement to start for free.
+
+The Best Backend Platform Recommendation for MoveEasy-Online
+
+The best platform for your needs is a custom-built API using the Node.js + Express + Prisma + PostgreSQL stack.
+
+Here's why this is the perfect choice over simpler "Backend-as-a-Service" (BaaS) platforms like Firebase or Supabase (for the full backend):
+
+Maximum Flexibility: Your "Financial OS" vision requires complex, custom business logic (credit scoring, multi-currency wallets, escrow, AI integration). A custom backend gives you 100% control to build these features exactly as you need them, without being limited by a third-party platform's rules.
+
+Language Consistency: Your frontend is built in React (TypeScript/JavaScript). Using Node.js for the backend means your entire stack is in the same language, making it easier for you or a future team to manage.
+
+Scalability: This stack is used by major tech companies like Netflix, Uber, and PayPal. It's proven to handle massive scale. You won't have to re-engineer your backend when MoveEasy grows.
+
+The "Start Free" Solution: This is the key. We will pair this powerful stack with modern cloud services that have excellent free tiers:
+
+Database: We'll host a free PostgreSQL database on Supabase or Neon.
+
+Backend Hosting: We'll deploy the Node.js application for free on Render.
+
+This combination gives you a world-class, custom-built backend with zero initial cost.
+
+Step-by-Step Guide: Setting Up Your MoveEasy Backend
+
+Let's build the foundation. Follow these steps to get your backend server up and running.
+
+Prerequisites
+
+Node.js: Ensure you have Node.js installed. (Download from nodejs.org)
+
+VS Code: Or any code editor of your choice.
+
+Git: For version control and deployment.
+
+Step 1: Initialize Your Backend Project
+
+Create a new folder for your backend (e.g., moveeasy-backend) and open it in your terminal.
+
+code
+Bash
+download
+content_copy
+expand_less
+mkdir moveeasy-backend
+cd moveeasy-backend
+npm init -y
+npm install express typescript ts-node @types/express --save
+npm install prisma pg bcrypt jsonwebtoken --save
+npm install @types/bcrypt @types/jsonwebtoken --save-dev
+
+This installs:
+
+express: The web server framework.
+
+typescript, ts-node, @types/express: For writing our server in TypeScript.
+
+prisma: Our modern Object-Relational Mapper (ORM) to talk to the database easily.
+
+pg: The database driver for PostgreSQL.
+
+bcrypt, jsonwebtoken: For secure password hashing and authentication tokens (JWT).
+
+Next, create a tsconfig.json file for TypeScript configuration:
+
+code
+JSON
+download
+content_copy
+expand_less
+// tsconfig.json
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "sourceMap": true,
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  }
+}
+Step 2: Set Up Your Free PostgreSQL Database on Supabase
+
+Go to supabase.com and sign up for a free account.
+
+Create a New Project. Give it a name (e.g., moveeasy-prod) and a database password. Choose a region closest to you.
+
+Wait for your project to be provisioned.
+
+Navigate to Project Settings (the gear icon) -> Database.
+
+Under Connection string, copy the URI. It will look like this: postgresql://postgres:[YOUR-PASSWORD]@[...].supabase.co:5432/postgres. This is your database URL.
+
+Step 3: Connect Your App to the Database with Prisma
+
+Back in your moveeasy-backend project:
+
+Initialize Prisma:
+
+code
+Bash
+download
+content_copy
+expand_less
+npx prisma init
+
+This creates a prisma folder with a schema.prisma file and a .env file.
+
+Configure your .env file:
+Open the newly created .env file and paste your Supabase connection string.
+
+code
+Env
+download
+content_copy
+expand_less
+# .env
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@[...].supabase.co:5432/postgres"
+JWT_SECRET="YOUR_SUPER_SECRET_RANDOM_STRING_HERE"
+
+Replace [YOUR-PASSWORD] with the password you set up on Supabase.
+Replace the JWT_SECRET with a long, random string. This is used to sign your authentication tokens.
+
+Define your Database Schema:
+Open prisma/schema.prisma and define your data models based on our API blueprint. This is where Prisma shines.
+
+code
+Prisma
+download
+content_copy
+expand_less
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String @id @default(uuid())
+  email           String @unique
+  name            String
+  passwordHash    String
+  role            UserRole
+  // ... add all other fields from our unified User type
+}
+
+enum UserRole {
+  Personal
+  Business
+  Agent
+  Source
+}
+
+// Add other models like Product, SavingsGoal, Stokvel, etc.
+
+Fill this out with the full schemas for all your models. This will be your single source of truth for your database structure.
+
+Run the Database Migration:
+This command reads your schema.prisma file and automatically creates the corresponding tables in your Supabase database.
+
+code
+Bash
+download
+content_copy
+expand_less
+npx prisma migrate dev --name init
+
+Prisma will ask you to name the migration. Call it init. You can now check your Supabase dashboard under the "Table Editor" to see your new User table!
+
+Step 4: Build the Express Server and First API Endpoint
+
+Create a src folder with an index.ts file.
+
+code
+TypeScript
+download
+content_copy
+expand_less
+// src/index.ts
+
+import express from 'express';
+import authRoutes from './routes/auth.routes'; // We will create this next
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middlewares
+app.use(express.json()); // To parse JSON request bodies
+
+// API Routes
+app.use('/api/v1/auth', authRoutes);
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+Now, let's create our first real API endpoint for user signup. Create a src/routes folder and an auth.routes.ts file.
+
+code
+TypeScript
+download
+content_copy
+expand_less
+// src/routes/auth.routes.ts
+
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// POST /api/v1/auth/signup
+router.post('/signup', async (req, res) => {
+  const { email, name, password, role } = req.body;
+
+  try {
+    // 1. Check if user exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ status: 'error', message: 'User already exists.' });
+    }
+
+    // 2. Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // 3. Create the new user in the database
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        passwordHash,
+        role,
+        // ... set default values for other fields
+      },
+    });
+    
+    // 4. Create a JWT token
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
+
+    // 5. Send back the user and token
+    res.status(201).json({ status: 'success', data: { user, token } });
+
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Something went wrong.' });
+  }
+});
+
+// Add your /login endpoint here as well...
+
+export default router;
+Step 5: Running and Deploying Your Backend for Free
+
+Run Locally: Add a "dev" script to your package.json.
+
+code
+JSON
+download
+content_copy
+expand_less
+"scripts": {
+  "dev": "ts-node src/index.ts"
+}
+
+Now you can run npm run dev to start your local server.
+
+Deploy on Render:
+
+Push your moveeasy-backend project to a new GitHub repository.
+
+Go to render.com and sign up for a free account.
+
+Click New + -> Web Service.
+
+Connect your GitHub account and select your moveeasy-backend repository.
+
+Configure the service:
+
+Name: moveeasy-api
+
+Runtime: Node
+
+Build Command: npm install
+
+Start Command: ts-node src/index.ts
+
+Click Advanced, then add your Environment Variables from your .env file (DATABASE_URL and JWT_SECRET).
+
+Click Create Web Service.
+
+Render will automatically deploy your server. In a few minutes, you will have a live, public URL for your MoveEasy-Online backend API. You can now update your frontend services/*.ts files to use this new URL instead of mock data.
+
+You have now successfully set up a professional, scalable, and free backend foundation. Your next steps are to build out the rest of the API endpoints from the blueprint we created.
