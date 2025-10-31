@@ -40,3 +40,4 @@ Here are some ideas to get you started:
 |-- package.json          (Root package.json for managing workspaces)
 |-- pnpm-workspace.yaml   (Or similar for yarn/npm)
 |-- tsconfig.base.json    (Shared TypeScript configuration)
+
